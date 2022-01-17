@@ -67,7 +67,7 @@ SCStatelessPresence.prototype._notifySocketJoin = function (socket, presenceChan
 SCStatelessPresence.prototype._markUserAsPresent = function (socket, channelName) {
   var username = socket.authToken.username;
   if (username == null) {
-    return;
+    username = socket.authToken.email;
   }
 
   var presenceChannelName = this._getPresenceChannelName(channelName);
@@ -89,6 +89,11 @@ SCStatelessPresence.prototype._markUserAsPresent = function (socket, channelName
 };
 
 SCStatelessPresence.prototype._handleNewlyAuthenticatedUser = function (socket) {
+  if (socket.lastAuthToken && (socket.lastAuthToken.username !== socket.authToken.username
+      || socket.lastAuthToken.email !== socket.authToken.email)) {
+    this._cleanupAllSubscribers(socket, socket.lastAuthToken);
+  }
+  socket.lastAuthToken = socket.authToken;
   var subscriptions = socket.subscriptions();
   subscriptions.forEach(function (channelName) {
     this._markUserAsPresent(socket, channelName);
@@ -134,6 +139,11 @@ SCStatelessPresence.prototype._cleanupSubscribers = function (socket, channelNam
     return;
   }
   var username = authToken.username;
+
+  if (!username)
+  {
+    username = authToken.email;
+  }
 
   var presenceChannelName = this._getPresenceChannelName(channelName);
   this.exchange.publish(presenceChannelName, {
